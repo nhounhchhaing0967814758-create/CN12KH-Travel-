@@ -6,7 +6,7 @@
   <title>CN12KH-Travel – Multi-Service Booking</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Kantumruy+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Kantumruy+Pro:wght@300;400;500;600;700&family=Fraunces:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -18,7 +18,7 @@
       <div class="seg" id="langSeg"><button data-lang="en" class="on">EN</button><button data-lang="km">KM</button></div>
       <div class="seg" id="curSeg"><button data-cur="USD" class="on">$</button><button data-cur="KHR">៛</button></div>
       <button class="chip bell" aria-label="Notifications">🔔<i class="badge">3</i></button>
-      <div class="avatar">N</div>
+      <button class="avatar" id="avatarBtn" aria-label="Account">👤</button>
     </div>
   </header>
 
@@ -40,6 +40,8 @@
       <div class="sec-head"><h2 data-i18n="popular"></h2></div>
       <div class="grid" id="destGrid"></div>
 
+      <button class="row gallery-link" data-view="gallery"><span class="ic">📸</span><div class="grow"><b data-i18n="galleryTitle"></b><br><small data-i18n="gallerySub"></small></div><span>›</span></button>
+
       <div class="promo">
         <div>
           <h3>☀️ <span data-i18n="summer"></span></h3>
@@ -51,6 +53,8 @@
 
     <section class="view" id="view-bookings" hidden><h2 data-i18n="bookings"></h2><div id="bookingList"></div></section>
     <section class="view" id="view-wishlist" hidden><h2 data-i18n="wishlist"></h2><div class="grid" id="wishGrid"></div></section>
+    <section class="view" id="view-gallery" hidden><div id="galleryRoot"></div></section>
+    <section class="view" id="view-admin" hidden><h2 data-i18n="adminPanel"></h2><div id="adminRoot"></div></section>
     <section class="view" id="view-offers" hidden><h2 data-i18n="offers"></h2><div id="offerList"></div></section>
     <section class="view" id="view-profile" hidden><h2 data-i18n="profile"></h2><div class="panel" id="profileBox"></div></section>
   </main>
@@ -67,9 +71,15 @@
     <div class="m-foot" id="modalFoot"></div>
   </div>
 </div>
+<div class="overlay" id="authOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true"><button class="x" id="closeAuth" aria-label="Close">✕</button><div id="authBody"></div></div>
+</div>
 <div class="toasts" id="toasts"></div>
 
 <script src="js/data.js"></script>
+<script src="js/i18n-extra.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/gallery.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

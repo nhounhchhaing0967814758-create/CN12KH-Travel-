@@ -8,10 +8,11 @@
   const S = {
     lang: store.get("lang", "en"), theme: store.get("theme", "dark"), cur: store.get("cur", "USD"),
     tab: "flights", view: "home",
-    wish: new Set(store.get("wish", [])), bookings: store.get("bookings", []),
+    wish: new Set(store.get("wish", [])), bookings: [],
     bk: null // current booking draft
   };
 
+  const bkKey = () => "bookings_" + (Auth.current()?.id ?? "guest");
   const t = k => I18N[S.lang][k] ?? k;
   const money = usd => S.cur === "USD" ? "$" + usd.toLocaleString("en-US") : (usd * RATE).toLocaleString("en-US") + " ៛";
 
@@ -82,6 +83,7 @@
 
   /* ---------- other views ---------- */
   function renderBookings() {
+    if (!Auth.current()) { $("#bookingList").innerHTML = `<p class="empty">${t("guestMsg")}</p><p style="text-align:center"><button class="btn" data-auth="login">${t("login")}</button></p>`; return; }
     $("#bookingList").innerHTML = S.bookings.length ? S.bookings.slice().reverse().map(b => `
       <div class="row"><span class="ic">🎫</span><div class="grow"><b>${b.title}</b><br><small>${b.ref} · ${b.date}</small></div><b>${money(b.usd)}</b></div>`).join("")
       : `<p class="empty">${t("noBookings")}</p>`;
@@ -91,10 +93,17 @@
       `<div class="row"><span class="ic">${["🏨", "🌴", "📱"][i]}</span><div class="grow">${t(k)}</div><button class="btn" data-offer="${i}">${t("bookNow")}</button></div>`).join("");
   }
   function renderProfile() {
-    $("#profileBox").style.display = "block";
-    $("#profileBox").innerHTML = `<div class="row"><div class="avatar">N</div><div class="grow"><b>Nomad Traveler</b><br><small>${t("rate")}</small></div></div>
+    const u = Auth.current(), box = $("#profileBox"); box.style.display = "block";
+    box.innerHTML = u ? `<div class="row"><div class="avatar">${u.name[0].toUpperCase()}</div><div class="grow"><b></b><br><small></small></div></div>
       <div class="row"><span class="grow">${t("bookings")}</span><b>${S.bookings.length}</b></div>
-      <div class="row"><span class="grow">${t("wishlist")}</span><b>${S.wish.size}</b></div>`;
+      <div class="row"><span class="grow">${t("wishlist")}</span><b>${S.wish.size}</b></div>
+      <div class="row"><span class="grow">${t("rate")}</span></div>
+      ${u.role === "admin" ? `<button class="btn" data-view="admin" style="width:100%;margin-bottom:8px">🛡️ ${t("adminPanel")}</button>` : ""}
+      <button class="btn ghost" data-logout style="width:100%">${t("logout")}</button>`
+      : `<div class="row"><span class="grow">${t("guestMsg")}</span></div>
+      <button class="btn" data-auth="login" style="width:100%;margin-bottom:8px">${t("login")}</button>
+      <button class="btn ghost" data-auth="signup" style="width:100%">${t("signup")}</button>`;
+    if (u) { box.querySelector(".grow b").textContent = u.name; box.querySelector(".grow small").textContent = u.email; }
   }
 
   function renderBottom() {
@@ -105,14 +114,19 @@
   }
 
   function showView(v) {
+    if (v === "admin" && !Auth.isAdmin()) v = "home";
     S.view = v;
     document.querySelectorAll(".view").forEach(e => e.hidden = e.id !== "view-" + v);
+    $("#app").classList.toggle("wide", v === "gallery" || v === "admin");
+    if (v === "gallery") Gallery.show();
+    if (v === "admin") Auth.renderAdmin();
     renderBottom(); $("#app").scrollTo?.({ top: 0 }); window.scrollTo({ top: 0 });
   }
 
   /* ---------- booking modal ---------- */
   const STEPS = 4;
   function openBooking(opts) {
+    if (!Auth.current()) { toast("🔐 " + t("loginFirst")); return Auth.openModal("login"); }
     S.bk = { step: 1, title: opts.title, usd: opts.usd, date: new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10),
              name: "", email: "", pay: "card", ref: "CN-" + Math.random().toString(36).slice(2, 8).toUpperCase() };
     $("#overlay").hidden = false; renderModal();
@@ -170,7 +184,7 @@
     }
     if (b.step === 3) {
       S.bookings.push({ title: b.title, usd: b.usd, date: b.date, ref: b.ref });
-      store.set("bookings", S.bookings); toast("🎉 " + t("booked"));
+      store.set(bkKey(), S.bookings); toast("🎉 " + t("booked"));
     }
     b.step++; renderModal();
   }
@@ -179,7 +193,10 @@
   document.addEventListener("click", e => {
     const q = s => e.target.closest(s);
     let el;
-    if ((el = q("[data-lang]"))) { S.lang = el.dataset.lang; refresh(); }
+    if (q("#avatarBtn")) Auth.current() ? showView("profile") : Auth.openModal("login");
+    else if ((el = q("[data-auth]"))) Auth.openModal(el.dataset.auth);
+    else if (q("[data-logout]")) { Auth.logout(); showView("home"); }
+    else if ((el = q("[data-lang]"))) { S.lang = el.dataset.lang; refresh(); }
     else if ((el = q("[data-cur]"))) { S.cur = el.dataset.cur; refresh(); }
     else if (q("#themeBtn")) { S.theme = S.theme === "dark" ? "light" : "dark"; applyPrefs(); }
     else if ((el = q("[data-tab]"))) { S.tab = el.dataset.tab; renderTabs(); renderForm(); }
@@ -216,8 +233,14 @@
 
   /* ---------- init ---------- */
   function refresh() {
+    S.bookings = store.get(bkKey(), []);
+    $("#avatarBtn").textContent = Auth.current()?.name[0].toUpperCase() ?? "👤";
     applyPrefs(); translateStatic(); renderTabs(); renderForm();
     renderDests(); renderBookings(); renderOffers(); renderProfile(); renderBottom();
+    if (S.view === "admin") Auth.renderAdmin();
+    document.dispatchEvent(new Event("cn:refresh"));
   }
+  window.CN = { t, toast };
+  Auth.onChange(() => { if (S.view === "admin" && !Auth.isAdmin()) showView("home"); refresh(); });
   refresh();
 })();
